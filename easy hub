@@ -4,12 +4,12 @@ local window = DrRayLibrary:Load("easy hub", "Default")
 local tab = DrRayLibrary.newTab("เมนู", "ImageIdHere")
 
 local distanceOptions = {
-    ["1,000"] = 1000,
-    ["2,000"] = 2000,
-    ["3,000"] = 3000,
-    ["4,000"] = 4000,
-    ["5,000"] = 5000,
-    ["75.00"] = 75
+["1,000"] = 1000,
+["2,000"] = 2000,
+["3,000"] = 3000,
+["4,000"] = 4000,
+["5,000"] = 5000,
+["75.00"] = 75
 }
 
 _G.maxAttackDistance = 1000
@@ -20,217 +20,281 @@ _G.autoCaptureNPC = false
 _G.autoDestroyNPC = false
 
 tab.newDropdown("เลือกระยะการโจมตี", "เลือกระยะห่างที่ต้องการ", {"1,000", "2,000", "3,000", "4,000", "5,000", "75.00"}, function(selected)
-    _G.maxAttackDistance = distanceOptions[selected]
+_G.maxAttackDistance = distanceOptions[selected]
 end)
 
 function attack(name)
-    local args = {
-        [1] = {
-            [1] = {
-                ["Event"] = "PunchAttack",
-                ["Enemy"] = name
-            },
-            [2] = "\4"
-        }
-    }
-    game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
+local args = {
+[1] = {
+[1] = {
+["Event"] = "PunchAttack",
+["Enemy"] = name
+},
+[2] = "\4"
+}
+}
+game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
 end
 
 function getNextEnemy(excludedEnemies, maxDistance)
-    local closestEnemy = nil
-    local closestDistance = math.huge
+local closestEnemy = nil
+local closestDistance = math.huge
 
-    for _, v in pairs(workspace.__Main.__Enemies.Client:GetChildren()) do
-        if v:FindFirstChild("HumanoidRootPart") and v:FindFirstChild("HealthBar") then
-            if not table.find(excludedEnemies, v.Name) then
-                local distance = (game.Players.LocalPlayer.Character.HumanoidRootPart.Position - v.HumanoidRootPart.Position).Magnitude
-                if distance < closestDistance and distance <= maxDistance then
-                    closestEnemy = v
-                    closestDistance = distance
-                end
-            end
-        end
-    end
-    return closestEnemy
+for _, v in pairs(workspace.__Main.__Enemies.Client:GetChildren()) do  
+    if v:FindFirstChild("HumanoidRootPart") then  
+        -- ตรวจสอบว่า HealthBar มีอยู่  
+        local healthBar = v:FindFirstChild("HealthBar")  
+        if healthBar then  
+            -- ตรวจสอบว่ามี HealthBar ที่มีข้อความที่สามารถอ่านได้  
+            local healthText = healthBar:FindFirstChild("Main") and healthBar.Main:FindFirstChild("Bar") and healthBar.Main.Bar:FindFirstChild("Amount") and healthBar.Main.Bar.Amount.Text  
+            if healthText then  
+                local healthValue = tonumber(healthText:match("(%d+)"))  
+                if healthValue and healthValue > 0 then  
+                    local distance = (game.Players.LocalPlayer.Character.HumanoidRootPart.Position - v.HumanoidRootPart.Position).Magnitude  
+                    if distance < closestDistance and distance <= maxDistance then  
+                        closestEnemy = v  
+                        closestDistance = distance  
+                    end  
+                end  
+            end  
+        end  
+    end  
+end  
+return closestEnemy
+
 end
 
 local attackedEnemies = {}
 
 spawn(function()
-    while task.wait(0.1) do
-        if _G.autoWarp or _G.autoAttack then
-            local currentEnemy = getNextEnemy(attackedEnemies, _G.maxAttackDistance)
+while task.wait(0.1) do
+if _G.autoWarp then
+local currentEnemy = getNextEnemy(attackedEnemies, _G.maxAttackDistance)
 
-            if currentEnemy then
-                repeat
-                    task.wait(0.1)
-                    if _G.autoWarp then
-                        -- วาร์ปร่าง
-                        game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = currentEnemy.HumanoidRootPart.CFrame * CFrame.new(0, 0, 4)
-                    end
-                    if _G.autoAttack then
-                        -- ตีศัตรู
-                        attack(currentEnemy.Name)
-                    end
+if currentEnemy then  
+            repeat  
+                task.wait(0.1)  
+                if _G.autoWarp then  
+                    -- วาร์ปร่าง  
+                    game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = currentEnemy.HumanoidRootPart.CFrame * CFrame.new(0, 0, 4)  
+                end  
 
-                    local healthText = currentEnemy.HealthBar.Main.Bar.Amount.Text
-                    local healthValue = tonumber(healthText:match("(%d+)"))
+                local healthText = currentEnemy.HealthBar.Main.Bar.Amount.Text  
+                local healthValue = tonumber(healthText:match("(%d+)"))  
 
-                    if healthValue == nil or healthValue <= 0 then
-                        table.insert(attackedEnemies, currentEnemy.Name)
-                        currentEnemy = nil
-                        break
-                    end
-                until healthValue == nil or healthValue <= 0 or (not _G.autoWarp and not _G.autoAttack)
+                if healthValue == nil or healthValue <= 0 then  
+                    table.insert(attackedEnemies, currentEnemy.Name)  
+                    currentEnemy = nil  
+                    break  
+                end  
+            until healthValue == nil or healthValue <= 0 or not _G.autoWarp  
 
-                if not currentEnemy then
-                    currentEnemy = getNextEnemy(attackedEnemies, _G.maxAttackDistance)
-                    if not currentEnemy then
-                        attackedEnemies = {}
-                    end
-                end
-            else
-                wait(1)
-            end
-        end
-    end
+            if not currentEnemy then  
+                currentEnemy = getNextEnemy(attackedEnemies, _G.maxAttackDistance)  
+                if not currentEnemy then  
+                    attackedEnemies = {}  
+                end  
+            end  
+        else  
+            wait(1)  
+        end  
+    end  
+end
+
 end)
 
 tab.newToggle("เปิด วาร์ปร่างไปหาศัตรู", "เปิดเพื่อให้วาร์ปร่างเข้าไปหาศัตรู", false, function(state)
-    _G.autoWarp = state
+_G.autoWarp = state
 end)
+-- ////////////////////// เพิ่ม Auto Attack //////////////////////
+local player = game.Players.LocalPlayer
+local enemiesFolder = workspace.__Main.__Enemies.Client
 
-tab.newToggle("เปิด ตีศัตรูอัตโนมัติ", "เปิดเพื่อให้โจมตีศัตรูอัตโนมัติ", false, function(state)
-    _G.autoAttack = state
+local function createAutoAttack()
+local closestNPC = nil
+local currentNPC = nil
+
+local function getDistanceToNPC(npc)  
+    if npc and npc:FindFirstChild("HumanoidRootPart") then  
+        return (player.Character.HumanoidRootPart.Position - npc.HumanoidRootPart.Position).Magnitude  
+    end  
+    return math.huge  
+end  
+
+local function findClosestNPC()  
+    local minDistance = math.huge  
+    local npcFound = nil  
+    for _, npc in pairs(enemiesFolder:GetChildren()) do  
+        if npc:IsA("Model") and npc:FindFirstChild("HumanoidRootPart") then  
+            local dist = getDistanceToNPC(npc)  
+            if dist < minDistance then  
+                minDistance = dist  
+                npcFound = npc  
+            end  
+        end  
+    end  
+    return npcFound  
+end  
+
+while _G.autoAttack do  
+    closestNPC = findClosestNPC()  
+    if closestNPC then  
+        local npcName = closestNPC.Name  
+        local args = {  
+            [1] = {  
+                [1] = {  
+                    ["PetPos"] = {  
+                        [npcName] = closestNPC.HumanoidRootPart.Position  
+                    },  
+                    ["Event"] = "PunchAttack",  
+                    ["Enemy"] = npcName  
+                },  
+                [2] = "\4"  
+            }  
+        }  
+        game:GetService("ReplicatedStorage").BridgeNet2.dataRemoteEvent:FireServer(unpack(args))  
+    end  
+    task.wait(0)  
+end
+
+end
+
+tab.newToggle("โจมตีศัตรูอัตโนมัติ", "เปิด/ปิด โหมดโจมตีอัตโนมัติแบบใหม่", false, function(state)
+_G.autoAttack = state
+if state then
+spawn(createAutoAttack)
+end
 end)
-
 -- ////////////////////// เพิ่ม Auto Attack V2 //////////////////////
 local player = game.Players.LocalPlayer
 local enemiesFolder = workspace.__Main.__Enemies.Client
 
 local function createAutoAttackV2()
-    local closestNPC = nil
-    local currentNPC = nil
+local closestNPC = nil
+local currentNPC = nil
 
-    local function getDistanceToNPC(npc)
-        if npc and npc:FindFirstChild("HumanoidRootPart") then
-            return (player.Character.HumanoidRootPart.Position - npc.HumanoidRootPart.Position).Magnitude
-        end
-        return math.huge
-    end
+local function getDistanceToNPC(npc)  
+    if npc and npc:FindFirstChild("HumanoidRootPart") then  
+        return (player.Character.HumanoidRootPart.Position - npc.HumanoidRootPart.Position).Magnitude  
+    end  
+    return math.huge  
+end  
 
-    local function findClosestNPC()
-        local minDistance = math.huge
-        local npcFound = nil
-        for _, npc in pairs(enemiesFolder:GetChildren()) do
-            if npc:IsA("Model") and npc:FindFirstChild("HumanoidRootPart") then
-                local dist = getDistanceToNPC(npc)
-                if dist < minDistance then
-                    minDistance = dist
-                    npcFound = npc
-                end
-            end
-        end
-        return npcFound
-    end
+local function findClosestNPC()  
+    local minDistance = math.huge  
+    local npcFound = nil  
+    for _, npc in pairs(enemiesFolder:GetChildren()) do  
+        if npc:IsA("Model") and npc:FindFirstChild("HumanoidRootPart") then  
+            local dist = getDistanceToNPC(npc)  
+            if dist < minDistance then  
+                minDistance = dist  
+                npcFound = npc  
+            end  
+        end  
+    end  
+    return npcFound  
+end  
 
-    while _G.autoAttackV2 do
-        closestNPC = findClosestNPC()
-        if closestNPC then
-            local npcName = closestNPC.Name
-            local args = {
-                [1] = {
-                    [1] = {
-                        ["PetPos"] = {
-                            [npcName] = closestNPC.HumanoidRootPart.Position
-                        },
-                        ["Event"] = "Attack",
-                        ["Enemy"] = npcName
-                    },
-                    [2] = "\8"
-                }
-            }
-            game:GetService("ReplicatedStorage").BridgeNet2.dataRemoteEvent:FireServer(unpack(args))
-        end
-        task.wait(1)
-    end
+while _G.autoAttackV2 do  
+    closestNPC = findClosestNPC()  
+    if closestNPC then  
+        local npcName = closestNPC.Name  
+        local args = {  
+            [1] = {  
+                [1] = {  
+                    ["PetPos"] = {  
+                        [npcName] = closestNPC.HumanoidRootPart.Position  
+                    },  
+                    ["Event"] = "Attack",  
+                    ["Enemy"] = npcName  
+                },  
+                [2] = "\8"  
+            }  
+        }  
+        game:GetService("ReplicatedStorage").BridgeNet2.dataRemoteEvent:FireServer(unpack(args))  
+    end  
+    task.wait(1)  
+end
+
 end
 
 tab.newToggle("ให้เงาไปโจมตีศัตรูอัตโนมัติ", "เปิด/ปิด โหมดโจมตีอัตโนมัติแบบใหม่", false, function(state)
-    _G.autoAttackV2 = state
-    if state then
-        spawn(createAutoAttackV2)
-    end
+_G.autoAttackV2 = state
+if state then
+spawn(createAutoAttackV2)
+end
 end)
 
 -- ////////////////////// ฟังก์ชั่นการเก็บ NPC //////////////////////
 local tab2 = DrRayLibrary.newTab("เก็บnpc", "เลือกเพื่อให้มันเก็บNPC")
 
 local function findNearestEnemy()
-    local nearestEnemy = nil
-    local shortestDistance = math.huge
+local nearestEnemy = nil
+local shortestDistance = math.huge
 
-    for _, enemy in pairs(workspace.__Main.__Enemies.Client:GetChildren()) do
-        if enemy:IsA("Model") and enemy:FindFirstChild("HumanoidRootPart") then
-            local distance = (enemy.HumanoidRootPart.Position - player.Character.HumanoidRootPart.Position).Magnitude
-            if distance < shortestDistance then
-                shortestDistance = distance
-                nearestEnemy = enemy
-            end
-        end
-    end
+for _, enemy in pairs(workspace.__Main.__Enemies.Client:GetChildren()) do  
+    if enemy:IsA("Model") and enemy:FindFirstChild("HumanoidRootPart") then  
+        local distance = (enemy.HumanoidRootPart.Position - player.Character.HumanoidRootPart.Position).Magnitude  
+        if distance < shortestDistance then  
+            shortestDistance = distance  
+            nearestEnemy = enemy  
+        end  
+    end  
+end  
 
-    return nearestEnemy
+return nearestEnemy
+
 end
 
 local function loopCaptureEnemy()
-    while _G.autoCaptureNPC do
-        local nearestEnemy = findNearestEnemy()
-        if nearestEnemy then
-            local args = {
-                [1] = {
-                    [1] = {
-                        ["Event"] = "EnemyCapture",
-                        ["Enemy"] = nearestEnemy.Name
-                    },
-                    [2] = "\4"
-                }
-            }
-            game:GetService("ReplicatedStorage").BridgeNet2.dataRemoteEvent:FireServer(unpack(args))
-        end
-        task.wait(0)
-    end
+while _G.autoCaptureNPC do
+local nearestEnemy = findNearestEnemy()
+if nearestEnemy then
+local args = {
+[1] = {
+[1] = {
+["Event"] = "EnemyCapture",
+["Enemy"] = nearestEnemy.Name
+},
+[2] = "\4"
+}
+}
+game:GetService("ReplicatedStorage").BridgeNet2.dataRemoteEvent:FireServer(unpack(args))
+end
+task.wait(0)
+end
 end
 
 local function loopDestroyEnemy()
-    while _G.autoDestroyNPC do
-        local nearestEnemy = findNearestEnemy()
-        if nearestEnemy then
-            local args = {
-                [1] = {
-                    [1] = {
-                        ["Event"] = "EnemyDestroy",
-                        ["Enemy"] = nearestEnemy.Name
-                    },
-                    [2] = "\4"
-                }
-            }
-            game:GetService("ReplicatedStorage").BridgeNet2.dataRemoteEvent:FireServer(unpack(args))
-        end
-        task.wait(0)
-    end
+while _G.autoDestroyNPC do
+local nearestEnemy = findNearestEnemy()
+if nearestEnemy then
+local args = {
+[1] = {
+[1] = {
+["Event"] = "EnemyDestroy",
+["Enemy"] = nearestEnemy.Name
+},
+[2] = "\4"
+}
+}
+game:GetService("ReplicatedStorage").BridgeNet2.dataRemoteEvent:FireServer(unpack(args))
+end
+task.wait(0)
+end
 end
 
 tab2.newToggle("เปิด/ปิด เก็บ NPC", "เปิดเพื่อเริ่มเก็บ NPC อัตโนมัติ", false, function(state)
-    _G.autoCaptureNPC = state
-    if state then
-        spawn(loopCaptureEnemy)
-    end
+_G.autoCaptureNPC = state
+if state then
+spawn(loopCaptureEnemy)
+end
 end)
 
 tab2.newToggle("เปิด/ปิด เก็บแบบเพชร", "เปิดเพื่อเริ่มทำลาย NPC อัตโนมัติ", false, function(state)
-    _G.autoDestroyNPC = state
-    if state then
-        spawn(loopDestroyEnemy)
-    end
+_G.autoDestroyNPC = state
+if state then
+spawn(loopDestroyEnemy)
+end
 end)
+
