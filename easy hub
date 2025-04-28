@@ -4,15 +4,15 @@ local window = DrRayLibrary:Load("easy hub", "Default")
 local tab = DrRayLibrary.newTab("เมนู", "ImageIdHere")
 
 local distanceOptions = {
-    ["1,000"] = 150,
-    ["2,000"] = 250,
-    ["3,000"] = 350,
+    ["1,000"] = 1000,
+    ["2,000"] = 2000,
+    ["3,000"] = 3000,
     ["4,000"] = 4000,
     ["5,000"] = 5000,
     ["75.00"] = 75
 }
 
-_G.maxAttackDistance = 75
+_G.maxAttackDistance = 1000
 
 tab.newDropdown("เลือกระยะการโจมตี", "เลือกระยะห่างที่ต้องการ", {"1,000", "2,000", "3,000", "4,000", "5,000", "75.00"}, function(selected)
     _G.maxAttackDistance = distanceOptions[selected]
