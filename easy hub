@@ -4,23 +4,22 @@ local window = DrRayLibrary:Load("easy hub", "Default")
 local tab = DrRayLibrary.newTab("เมนู", "ImageIdHere")
 
 local distanceOptions = {
-    ["1,000"] = 1000,
-    ["2,000"] = 2000,
-    ["3,000"] = 3000,
+    ["1,000"] = 150,
+    ["2,000"] = 250,
+    ["3,000"] = 350,
     ["4,000"] = 4000,
     ["5,000"] = 5000,
     ["75.00"] = 75
 }
 
-_G.maxAttackDistance = 1000
+_G.maxAttackDistance = 75
 
 tab.newDropdown("เลือกระยะการโจมตี", "เลือกระยะห่างที่ต้องการ", {"1,000", "2,000", "3,000", "4,000", "5,000", "75.00"}, function(selected)
     _G.maxAttackDistance = distanceOptions[selected]
-    print("ตั้งค่าระยะการโจมตีเป็น: " .. tostring(_G.maxAttackDistance))
 end)
 
 -- ตัวเปิด/ปิดโจมตีระบบเดิม
-tab.newToggle("เปิด Auto Attack", "เปิดเพื่อใช้ฟังก์ชั่น Auto Attack เดิม", true, function(toggleState)
+tab.newToggle("เปิด ฟาร์มอัตโนมัติ", "เปิดเพื่อใช้ฟังก์ชั่น Auto Attack เดิม", true, function(toggleState)
     if toggleState then
         _G.a = true
     else
@@ -72,10 +71,7 @@ tab.newToggle("เปิด Auto Attack", "เปิดเพื่อใช้�
                 local healthText = currentEnemy.HealthBar.Main.Bar.Amount.Text
                 local healthValue = tonumber(healthText:match("(%d+)"))
 
-                print("เลือดของ " .. currentEnemy.Name .. " ตอนนี้: " .. (healthValue or 0) .. " HP")
-
                 if healthValue == nil or healthValue <= 0 then
-                    print(currentEnemy.Name .. " เลือดหมดแล้ว!")
                     table.insert(attackedEnemies, currentEnemy.Name)
                     currentEnemy = nil
                     break
@@ -83,17 +79,12 @@ tab.newToggle("เปิด Auto Attack", "เปิดเพื่อใช้�
             until healthValue == nil or healthValue <= 0 or not _G.a
 
             if currentEnemy == nil then
-                print("กำลังหาศัตรูตัวใหม่...")
                 currentEnemy = getNextEnemy(attackedEnemies, _G.maxAttackDistance)
-                if currentEnemy then
-                    print("เลือกศัตรูตัวใหม่: " .. currentEnemy.Name)
-                else
-                    print("ไม่พบศัตรูตัวใหม่! รีเซ็ตลิสต์")
+                if not currentEnemy then
                     attackedEnemies = {}
                 end
             end
         else
-            print("ไม่พบศัตรูในเกม!")
             wait(1)
         end
     end
@@ -149,8 +140,6 @@ local function createAutoAttackV2()
                 }
             }
             game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
-        else
-            print("ไม่พบ NPC ที่ใกล้ที่สุด.")
         end
     end
 
@@ -168,14 +157,13 @@ local function createAutoAttackV2()
 
         if closestNPC then
             attackClosestNPC()
-            print("โจมตี NPC ที่ใกล้ที่สุด: " .. closestNPC.Name)
         end
 
         wait(1)
     end
 end
 
-tab.newToggle("Auto Attack V2", "เปิด/ปิด โหมดโจมตีอัตโนมัติแบบใหม่", false, function(state)
+tab.newToggle(" ให้เงาไปโจมตีศัตรูอัตโนมัติ", "เปิด/ปิด โหมดโจมตีอัตโนมัติแบบใหม่", false, function(state)
     if state then
         _G.autoAttackV2 = true
         createAutoAttackV2()
@@ -211,8 +199,6 @@ local function loopFindNearestEnemy()
         local nearestEnemy = findNearestEnemy()
 
         if nearestEnemy then
-            print("หมอนที่ใกล้ที่สุดคือ: " .. nearestEnemy.Name)
-
             local args = {
                 [1] = {
                     [1] = {
@@ -224,90 +210,53 @@ local function loopFindNearestEnemy()
             }
 
             game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
-        else
-            print("ไม่พบหมอนใดในระยะใกล้")
         end
 
-        wait(1)
+        wait(0)
     end
 end
 
 tab2.newToggle("เปิด/ปิด เก็บ NPC", "เปิดเพื่อเริ่มเก็บ NPC อัตโนมัติ", false, function(state)
     isLooping = state
     if state then
-        print("เริ่มต้นเก็บ NPC")
         spawn(function() loopFindNearestEnemy() end)
     else
-        print("หยุดการเก็บ NPC")
         isLooping = false
     end
 end)
--- ฟังก์ชั่นในการเลือกหมอนที่ใกล้ที่สุด
-local function findNearestEnemy()
-    local nearestEnemy = nil
-    local shortestDistance = math.huge -- เริ่มต้นด้วยระยะทางที่มากที่สุด
-
-    -- ตรวจสอบทุกหมอนใน workspace.__Main.__Enemies.Client
-    for _, enemy in pairs(workspace.__Main.__Enemies.Client:GetChildren()) do
-        if enemy:IsA("Model") and enemy:FindFirstChild("HumanoidRootPart") then
-            -- คำนวณระยะห่างจากผู้เล่นไปยังหมอน
-            local distance = (enemy.HumanoidRootPart.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
-            if distance < shortestDistance then
-                shortestDistance = distance
-                nearestEnemy = enemy
-            end
-        end
-    end
-
-    return nearestEnemy
-end
 
 -- ตัวแปรควบคุมการวนลูป
 local isLooping = true 
 
--- ฟังก์ชั่นที่ใช้ในการวนลูป
 local function loopFindNearestEnemy()
     while isLooping do
         local nearestEnemy = findNearestEnemy()
 
         if nearestEnemy then
-            -- ปริ้นชื่อหมอนที่ใกล้ที่สุด
-            print("หมอนที่ใกล้ที่สุดคือ: " .. nearestEnemy.Name)
-
-            -- เตรียมค่า args เพื่อส่งไปยัง RemoteEvent
             local args = {
                 [1] = {
                     [1] = {
                         ["Event"] = "EnemyDestroy",
-                        ["Enemy"] = nearestEnemy.Name -- ใส่ชื่อหมอนที่ใกล้ที่สุดแทนที่ใน ["Enemy"]
+                        ["Enemy"] = nearestEnemy.Name
                     },
                     [2] = "\4"
                 }
             }
 
-            -- ส่งคำสั่งไปยัง RemoteEvent
             game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
-        else
-            print("ไม่พบหมอนใดในระยะใกล้")
         end
 
-        -- ใส่เวลาให้วนลูป (เช่น ทุก 1 วินาที)
-        wait(0)  -- เพิ่มเวลารอให้พอสมควร
+        wait(0)
     end
 end
 
--- เพิ่มฟังก์ชันเปิด/ปิดเก็บเงา NPC ใน tab2
 tab2.newToggle("เปิด/ปิด เก็บแบบเพชร", "เปิดเพื่อเริ่มเก็บ NPC อัตโนมัติ", false, function(state)
     isLooping = state
     if state then
-        print("เริ่มต้นเก็บ NPC")
-        -- เรียกใช้งาน loopFindNearestEnemy ในตอนที่เปิดการวนลูป
-        spawn(function() -- ใช้ spawn เพื่อไม่ให้เกิดการหยุดชะงัก
+        spawn(function()
             loopFindNearestEnemy()
         end)
     else
-        print("หยุดการเก็บ NPC")
-        -- หยุดการวนลูปด้วยการเปลี่ยน isLooping เป็น false
         isLooping = false
     end
 end)
