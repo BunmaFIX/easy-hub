@@ -22,20 +22,6 @@ _G.autoDestroyNPC = false
 tab.newDropdown("เลือกระยะการโจมตี", "เลือกระยะห่างที่ต้องการ", {"1,000", "2,000", "3,000", "4,000", "5,000", "75.00"}, function(selected)
 _G.maxAttackDistance = distanceOptions[selected]
 end)
-
-function attack(name)
-local args = {
-[1] = {
-[1] = {
-["Event"] = "PunchAttack",
-["Enemy"] = name
-},
-[2] = "\4"
-}
-}
-game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
-end
-
 function getNextEnemy(excludedEnemies, maxDistance)
 local closestEnemy = nil
 local closestDistance = math.huge
@@ -149,7 +135,7 @@ while _G.autoAttack do
                     ["Event"] = "PunchAttack",  
                     ["Enemy"] = npcName  
                 },  
-                [2] = "\4"  
+                [2] = "\5"  
             }  
         }  
         game:GetService("ReplicatedStorage").BridgeNet2.dataRemoteEvent:FireServer(unpack(args))  
@@ -208,7 +194,7 @@ while _G.autoAttackV2 do
                     ["Event"] = "Attack",  
                     ["Enemy"] = npcName  
                 },  
-                [2] = "\8"  
+                [2] = "\6"  
             }  
         }  
         game:GetService("ReplicatedStorage").BridgeNet2.dataRemoteEvent:FireServer(unpack(args))  
@@ -256,7 +242,7 @@ local args = {
 ["Event"] = "EnemyCapture",
 ["Enemy"] = nearestEnemy.Name
 },
-[2] = "\4"
+[2] = "\5"
 }
 }
 game:GetService("ReplicatedStorage").BridgeNet2.dataRemoteEvent:FireServer(unpack(args))
@@ -275,7 +261,7 @@ local args = {
 ["Event"] = "EnemyDestroy",
 ["Enemy"] = nearestEnemy.Name
 },
-[2] = "\4"
+[2] = "\5"
 }
 }
 game:GetService("ReplicatedStorage").BridgeNet2.dataRemoteEvent:FireServer(unpack(args))
@@ -297,4 +283,3 @@ if state then
 spawn(loopDestroyEnemy)
 end
 end)
-
