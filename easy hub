@@ -31,78 +31,79 @@ spawn(function()
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
-local player = Players.LocalPlayer    
-        local character = player.Character or player.CharacterAdded:Wait()    
-        local hrp = character:WaitForChild("HumanoidRootPart")    
-        local humanoid = character:WaitForChild("Humanoid")  
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local hrp = character:WaitForChild("HumanoidRootPart")
+local humanoid = character:WaitForChild("Humanoid")
 
-        humanoid.WalkSpeed = 0  
-        humanoid.JumpPower = 0  
+humanoid.WalkSpeed = 0    
+    humanoid.JumpPower = 0    
 
-        local enemiesFolder = workspace:WaitForChild("__Main"):WaitForChild("__Enemies"):WaitForChild("Client")  
+    local enemiesFolder = workspace:WaitForChild("__Main"):WaitForChild("__Enemies"):WaitForChild("Client")    
 
-        local function getHealth(model)  
-            local bar = model:FindFirstChild("HealthBar") and model.HealthBar:FindFirstChild("Main")  
-            local amount = bar and bar:FindFirstChild("Bar") and bar.Bar:FindFirstChild("Amount")  
-            local text = amount and amount:IsA("TextLabel") and amount.Text  
-            local health = text and tonumber(text:match("(%d+)"))  
-            return health  
-        end  
+    local function getHealth(model)    
+        local bar = model:FindFirstChild("HealthBar") and model.HealthBar:FindFirstChild("Main")    
+        local amount = bar and bar:FindFirstChild("Bar") and bar.Bar:FindFirstChild("Amount")    
+        local text = amount and amount:IsA("TextLabel") and amount.Text    
+        local health = text and tonumber(text:match("(%d+)"))    
+        return health    
+    end    
 
-        local function getClosestAliveEnemy()  
-            local closest, minDist = nil, math.huge  
-            for _, model in ipairs(enemiesFolder:GetChildren()) do  
-                if model:IsA("Model") and model:FindFirstChild("HumanoidRootPart") then  
-                    local health = getHealth(model)  
-                    if health and health > 0 then  
-                        local dist = (hrp.Position - model.HumanoidRootPart.Position).Magnitude  
-                        if dist < minDist then  
-                            closest = model  
-                            minDist = dist  
-                        end  
-                    end  
-                end  
-            end  
-            return closest  
-        end  
+    local function getClosestAliveEnemy()    
+        local closest, minDist = nil, math.huge    
+        for _, model in ipairs(enemiesFolder:GetChildren()) do    
+            if model:IsA("Model") and model:FindFirstChild("HumanoidRootPart") then    
+                local health = getHealth(model)    
+                if health and health > 0 then    
+                    local dist = (hrp.Position - model.HumanoidRootPart.Position).Magnitude    
+                    if dist < minDist then    
+                        closest = model    
+                        minDist = dist    
+                    end    
+                end    
+            end    
+        end    
+        return closest    
+    end    
 
-        local currentTarget = nil  
-        local flyConnection = nil  
+    local currentTarget = nil    
+    local flyConnection = nil    
 
-        local function flyToTarget(target)  
-            if flyConnection then flyConnection:Disconnect() end  
-            flyConnection = RunService.Heartbeat:Connect(function(dt)  
-                if not character or not character:FindFirstChild("HumanoidRootPart") or not target or not target:FindFirstChild("HumanoidRootPart") then  
-                    return  
-                end  
-                local pos = hrp.Position  
-                local targetPos = target.HumanoidRootPart.Position  
-                local distance = (pos - targetPos).Magnitude  
-                if distance > 5 then  
-                    local dir = (targetPos - pos).Unit  
-                    local newPos = pos + dir * 300 * dt  
-                    hrp.CFrame = CFrame.new(newPos, targetPos)  
-                end  
-            end)  
-        end  
+    local function flyToTarget(target)    
+        if flyConnection then flyConnection:Disconnect() end    
+        flyConnection = RunService.Heartbeat:Connect(function(dt)    
+            if not character or not character:FindFirstChild("HumanoidRootPart") or not target or not target:FindFirstChild("HumanoidRootPart") then    
+                return    
+            end    
+            local pos = hrp.Position    
+            local targetPos = target.HumanoidRootPart.Position    
+            local distance = (pos - targetPos).Magnitude    
+            if distance > 5 then    
+                local dir = (targetPos - pos).Unit    
+                local newPos = pos + dir * 300 * dt    
+                hrp.CFrame = CFrame.new(newPos, targetPos)    
+            end    
+        end)    
+    end    
 
-        while _G.autoFarm do  
-            if not currentTarget or not currentTarget.Parent or getHealth(currentTarget) == 0 then  
-                currentTarget = getClosestAliveEnemy()  
-                if currentTarget then  
-                    print("บินไปหาเป้าหมายใหม่:", currentTarget.Name)  
-                    flyToTarget(currentTarget)  
-                else  
-                    print("ไม่พบศัตรูที่ยังมีชีวิต")  
-                end  
-            end  
-            task.wait(1)  
-        end  
+    while _G.autoFarm do    
+        if not currentTarget or not currentTarget.Parent or getHealth(currentTarget) == 0 then    
+            currentTarget = getClosestAliveEnemy()    
+            if currentTarget then    
+                print("บินไปหาเป้าหมายใหม่:", currentTarget.Name)    
+                flyToTarget(currentTarget)    
+            else    
+                print("ไม่พบศัตรูที่ยังมีชีวิต")    
+            end    
+        end    
+        task.wait(0)    
+    end    
 
-        if flyConnection then flyConnection:Disconnect() end  
-        humanoid.WalkSpeed = 30  
-        humanoid.JumpPower = 50  
-    end)  
+    if flyConnection then flyConnection:Disconnect() end    
+    humanoid.WalkSpeed = 30    
+    humanoid.JumpPower = 50    
+end)
+
 end
 
 end)
@@ -173,73 +174,74 @@ local player = game.Players.LocalPlayer
 local playerChar = player.Character or player.CharacterAdded:Wait()
 local root = playerChar:WaitForChild("HumanoidRootPart")
 
-local enemiesFolder = workspace.__Main.__Enemies.Client  
-local remote = game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent")  
-local RunService = game:GetService("RunService")  
+local enemiesFolder = workspace.__Main.__Enemies.Client
+local remote = game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent")
+local RunService = game:GetService("RunService")
 
-local lastEnemy = nil  
+local lastEnemy = nil
 
-local function getDistance(cf1, cf2)  
-    return (cf1.Position - cf2.Position).Magnitude  
-end  
+local function getDistance(cf1, cf2)
+return (cf1.Position - cf2.Position).Magnitude
+end
 
-local function getHealth(model)  
-    local text = model:FindFirstChild("HealthBar")  
-        and model.HealthBar:FindFirstChild("Main")  
-        and model.HealthBar.Main:FindFirstChild("Bar")  
-        and model.HealthBar.Main.Bar:FindFirstChild("Amount")  
-        and model.HealthBar.Main.Bar.Amount:IsA("TextLabel")  
-        and model.HealthBar.Main.Bar.Amount.Text  
-    return text and tonumber(text:match("(%d+)"))  
-end  
+local function getHealth(model)
+local text = model:FindFirstChild("HealthBar")
+and model.HealthBar:FindFirstChild("Main")
+and model.HealthBar.Main:FindFirstChild("Bar")
+and model.HealthBar.Main.Bar:FindFirstChild("Amount")
+and model.HealthBar.Main.Bar.Amount:IsA("TextLabel")
+and model.HealthBar.Main.Bar.Amount.Text
+return text and tonumber(text:match("(%d+)"))
+end
 
-local function findClosestEnemy()  
-    local closestEnemy, closestDistance = nil, math.huge  
-    for _, enemy in ipairs(enemiesFolder:GetChildren()) do  
-        if enemy:IsA("Model") and enemy:FindFirstChild("HumanoidRootPart") then  
-            local distance = getDistance(root.CFrame, enemy.HumanoidRootPart.CFrame)  
-            local health = getHealth(enemy)  
-            if health and health > 0 and distance < closestDistance then  
-                closestDistance = distance  
-                closestEnemy = enemy  
-            end  
-        end  
-    end  
-    return closestEnemy  
-end  
+local function findClosestEnemy()
+local closestEnemy, closestDistance = nil, math.huge
+for _, enemy in ipairs(enemiesFolder:GetChildren()) do
+if enemy:IsA("Model") and enemy:FindFirstChild("HumanoidRootPart") then
+local distance = getDistance(root.CFrame, enemy.HumanoidRootPart.CFrame)
+local health = getHealth(enemy)
+if health and health > 0 and distance < closestDistance then
+closestDistance = distance
+closestEnemy = enemy
+end
+end
+end
+return closestEnemy
+end
 
-autoAttackConnection = RunService.Heartbeat:Connect(function()  
-    if not _G.autoAttackV2 then return end  
+autoAttackConnection = RunService.Heartbeat:Connect(function()
+if not _G.autoAttackV2 then return end
 
-    local currentTime = tick()  
-    local enemy = findClosestEnemy()  
-    if enemy then  
-        local health = getHealth(enemy)  
-        if enemy ~= lastEnemy or (currentTime - lastAttackTime >= attackCooldown) then  
-            lastEnemy = enemy  
-            lastAttackTime = currentTime  
+local currentTime = tick()    
+local enemy = findClosestEnemy()    
+if enemy then    
+    local health = getHealth(enemy)    
+    if enemy ~= lastEnemy or (currentTime - lastAttackTime >= attackCooldown) then    
+        lastEnemy = enemy    
+        lastAttackTime = currentTime    
 
-            if health and health > 0 then  
-                local args = {  
-                    [1] = {  
-                        [1] = {  
-                            ["PetPos"] = {},  
-                            ["AttackType"] = "All",  
-                            ["Event"] = "Attack",  
-                            ["Enemy"] = enemy.Name  
-                        },  
-                        [2] = "\009"  
-                    }  
-                }  
-                remote:FireServer(unpack(args))  
-            end  
-        end  
-    end  
+        if health and health > 0 then    
+            local args = {    
+                [1] = {    
+                    [1] = {    
+                        ["PetPos"] = {},    
+                        ["AttackType"] = "All",    
+                        ["Event"] = "Attack",    
+                        ["Enemy"] = enemy.Name    
+                    },    
+                    [2] = "\006"    
+                }    
+            }    
+            remote:FireServer(unpack(args))    
+        end    
+    end    
+end    
 
-    -- รีเซ็ตถ้าศัตรูตายหรือหาย  
-    if lastEnemy and (not lastEnemy.Parent or getHealth(lastEnemy) == nil or getHealth(lastEnemy) <= 0) then  
-        lastEnemy = nil  
-    end  
+-- รีเซ็ตถ้าศัตรูตายหรือหาย    
+if lastEnemy and (not lastEnemy.Parent or getHealth(lastEnemy) == nil or getHealth(lastEnemy) <= 0) then    
+    lastEnemy = nil    
+end
+
 end)
 
 end
@@ -328,4 +330,125 @@ _G.autoDestroyNPC = state
 if state then
 spawn(loopDestroyEnemy)
 end
+end)
+local tab3 = DrRayLibrary.newTab("วาป", "ImageIdHere")
+tab3.newButton("Leveling City", "กดเพื่อวาปไปยัง Leveling City", function()
+    local args = {
+        {
+            {
+                Event = "ChangeSpawn",
+                Spawn = "SoloWorld"
+            },
+            "\011"
+        }
+    }
+    game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
+end)
+tab3.newButton("Grass Village", "กดเพื่อวาปไปยัง Grass Village", function()
+    local args = {
+	{
+		{
+			Event = "ChangeSpawn",
+			Spawn = "NarutoWorld"
+		},
+		"\011"
+	}
+}
+game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
+end)
+tab3.newButton("Brum lsland", "กดเพื่อวาปไปยัง Brum lsland", function()
+    local args = {
+	{
+		{
+			Event = "ChangeSpawn",
+			Spawn = "OPWorld"
+		},
+		"\011"
+	}
+}
+game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
+end)
+tab3.newButton("Faceheal Town", "กดเพื่อวาปไปยัง Faceheal Town", function()
+    local args = {
+	{
+		{
+			Event = "ChangeSpawn",
+			Spawn = "BleachWorld"
+		},
+		"\011"
+	}
+}
+game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
+end)
+tab3.newButton("Lucky Kingdom", "กดเพื่อวาปไปยัง Lucky Kingdom", function()
+    local args = {
+	{
+		{
+			Event = "ChangeSpawn",
+			Spawn = "BCWorld"
+		},
+		"\011"
+	}
+}
+game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
+end)
+tab3.newButton("Nipon City", "กดเพื่อวาปไปยัง Nipon City", function()
+    local args = {
+	{
+		{
+			Event = "ChangeSpawn",
+			Spawn = "ChainsawWorld"
+		},
+		"\011"
+	}
+}
+game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
+end)
+tab3.newButton("Mori Town", "กดเพื่อวาปไปยัง Mori Town", function()
+    local args = {
+	{
+		{
+			Event = "ChangeSpawn",
+			Spawn = "JojoWorld"
+		},
+		"\011"
+	}
+}
+game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
+end)
+tab3.newButton("Dragon City", "กดเพื่อวาปไปยัง Dragon City", function()
+    local args = {
+	{
+		{
+			Event = "ChangeSpawn",
+			Spawn = "DBWorld"
+		},
+		"\011"
+	}
+}
+game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
+end)
+tab3.newButton("XZ City", "กดเพื่อวาปไปยัง XZ City", function()
+    local args = {
+	{
+		{
+			Event = "ChangeSpawn",
+			Spawn = "OPMWorld"
+		},
+		"\011"
+	}
+}
+game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
+end)
+tab3.newButton("Kindama City", "กดเพื่อวาปไปยัง Kindama City", function()
+    local args = {
+	{
+		{
+			Event = "ChangeSpawn",
+			Spawn = "DanWorld"
+		},
+		"\011"
+	}
+}
+game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
 end)
