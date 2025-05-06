@@ -96,7 +96,7 @@ humanoid.WalkSpeed = 0
                 print("ไม่พบศัตรูที่ยังมีชีวิต")    
             end    
         end    
-        task.wait(0)    
+        task.wait(0.5)    
     end    
 
     if flyConnection then flyConnection:Disconnect() end    
