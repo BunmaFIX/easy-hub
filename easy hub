@@ -228,7 +228,7 @@ autoAttackConnection = RunService.Heartbeat:Connect(function()
                             ["Event"] = "Attack",  
                             ["Enemy"] = enemy.Name  
                         },  
-                        [2] = "\006"  
+                        [2] = "\009"  
                     }  
                 }  
                 remote:FireServer(unpack(args))  
