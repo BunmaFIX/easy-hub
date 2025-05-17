@@ -147,7 +147,7 @@ local args = {
 ["Event"] = "PunchAttack",
 ["Enemy"] = npcName
 },
-[2] = "\5"
+[2] = "\004"
 }
 }
 game:GetService("ReplicatedStorage").BridgeNet2.dataRemoteEvent:FireServer(unpack(args))
@@ -290,7 +290,7 @@ local args = {
 ["Event"] = "EnemyCapture",
 ["Enemy"] = nearestEnemy.Name
 },
-[2] = "\5"
+[2] = "\004"
 }
 }
 game:GetService("ReplicatedStorage").BridgeNet2.dataRemoteEvent:FireServer(unpack(args))
@@ -309,7 +309,7 @@ local args = {
 ["Event"] = "EnemyDestroy",
 ["Enemy"] = nearestEnemy.Name
 },
-[2] = "\5"
+[2] = "\004"
 }
 }
 game:GetService("ReplicatedStorage").BridgeNet2.dataRemoteEvent:FireServer(unpack(args))
