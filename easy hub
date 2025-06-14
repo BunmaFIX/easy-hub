@@ -1,454 +1,50 @@
-local DrRayLibrary = loadstring(game:HttpGet("https://raw.githubusercontent.com/AZYsGithub/DrRay-UI-Library/main/DrRay.lua"))()
-local window = DrRayLibrary:Load("easy hub", "Default")
-
-local tab = DrRayLibrary.newTab("เมนู", "ImageIdHere")
-
-local distanceOptions = {
-["1,000"] = 1000,
-["2,000"] = 2000,
-["3,000"] = 3000,
-["4,000"] = 4000,
-["5,000"] = 5000,
-["75.00"] = 75
-}
-
-_G.maxAttackDistance = 1000
-_G.autofarm = false
-_G.autoAttack = false
-_G.autoAttackV2 = false
-_G.autoCaptureNPC = false
-_G.autoDestroyNPC = false
-
-tab.newDropdown("เลือกระยะการโจมตี", "เลือกระยะห่างที่ต้องการ", {"1,000", "2,000", "3,000", "4,000", "5,000", "75.00"}, function(selected)
-_G.maxAttackDistance = distanceOptions[selected]
-end)
-
--- ////////////////////// เพิ่ม Auto  Farm //////////////////////
-tab.newToggle("Auto Farm (บินไปโจมตีศัตรู)", "เปิดเพื่อให้บินไปโจมตีศัตรูอัตโนมัติ", false, function(state)
-_G.autoFarm = state
-if state then
-spawn(function()
+local HttpService = game:GetService("HttpService")
+local TeleportService = game:GetService("TeleportService")
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
-local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local hrp = character:WaitForChild("HumanoidRootPart")
-local humanoid = character:WaitForChild("Humanoid")
+local function getLowestPopulationServer()
+	local placeId = game.PlaceId
+	local nextPageCursor = ""
+	local lowestJobId = nil
+	local lowestCount = math.huge
 
-humanoid.WalkSpeed = 0    
-    humanoid.JumpPower = 0    
+	repeat
+		local url = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100&cursor=%s"):format(placeId, nextPageCursor)
+		local success, response = pcall(function()
+			return HttpService:JSONDecode(game:HttpGet(url))
+		end)
 
-    local enemiesFolder = workspace:WaitForChild("__Main"):WaitForChild("__Enemies"):WaitForChild("Client")    
+		if success and response and response.data then
+			for _, server in ipairs(response.data) do
+				if server.playing < lowestCount and server.id ~= game.JobId then
+					lowestCount = server.playing
+					lowestJobId = server.id
+				end
+			end
+			nextPageCursor = response.nextPageCursor or ""
+		else
+			break
+		end
+	until nextPageCursor == nil or nextPageCursor == ""
 
-    local function getHealth(model)    
-        local bar = model:FindFirstChild("HealthBar") and model.HealthBar:FindFirstChild("Main")    
-        local amount = bar and bar:FindFirstChild("Bar") and bar.Bar:FindFirstChild("Amount")    
-        local text = amount and amount:IsA("TextLabel") and amount.Text    
-        local health = text and tonumber(text:match("(%d+)"))    
-        return health    
-    end    
-
-    local function getClosestAliveEnemy()    
-        local closest, minDist = nil, math.huge    
-        for _, model in ipairs(enemiesFolder:GetChildren()) do    
-            if model:IsA("Model") and model:FindFirstChild("HumanoidRootPart") then    
-                local health = getHealth(model)    
-                if health and health > 0 then    
-                    local dist = (hrp.Position - model.HumanoidRootPart.Position).Magnitude    
-                    if dist < minDist then    
-                        closest = model    
-                        minDist = dist    
-                    end    
-                end    
-            end    
-        end    
-        return closest    
-    end    
-
-    local currentTarget = nil    
-    local flyConnection = nil    
-
-    local function flyToTarget(target)    
-        if flyConnection then flyConnection:Disconnect() end    
-        flyConnection = RunService.Heartbeat:Connect(function(dt)    
-            if not character or not character:FindFirstChild("HumanoidRootPart") or not target or not target:FindFirstChild("HumanoidRootPart") then    
-                return    
-            end    
-            local pos = hrp.Position    
-            local targetPos = target.HumanoidRootPart.Position    
-            local distance = (pos - targetPos).Magnitude    
-            if distance > 5 then    
-                local dir = (targetPos - pos).Unit    
-                local newPos = pos + dir * 300 * dt    
-                hrp.CFrame = CFrame.new(newPos, targetPos)    
-            end    
-        end)    
-    end    
-
-    while _G.autoFarm do    
-        if not currentTarget or not currentTarget.Parent or getHealth(currentTarget) == 0 then    
-            currentTarget = getClosestAliveEnemy()    
-            if currentTarget then    
-                print("บินไปหาเป้าหมายใหม่:", currentTarget.Name)    
-                flyToTarget(currentTarget)    
-            else    
-                print("ไม่พบศัตรูที่ยังมีชีวิต")    
-            end    
-        end    
-        task.wait(0.5)    
-    end    
-
-    if flyConnection then flyConnection:Disconnect() end    
-    humanoid.WalkSpeed = 30    
-    humanoid.JumpPower = 50    
-end)
-
+	return lowestJobId
 end
 
-end)
--- ////////////////////// เพิ่ม Auto Attack //////////////////////
-local player = game.Players.LocalPlayer
-local enemiesFolder = workspace.__Main.__Enemies.Client
+local function checkAndRejoin()
+	local combatLog = PlayerGui:WaitForChild("Hotbar"):WaitForChild("HotbarHolder"):WaitForChild("List"):WaitForChild("HotbarCombatLogging")
 
-local function createAutoAttack()
-local function getDistanceToNPC(npc)
-if npc and npc:FindFirstChild("HumanoidRootPart") then
-return (player.Character.HumanoidRootPart.Position - npc.HumanoidRootPart.Position).Magnitude
-end
-return math.huge
-end
-
-local function findClosestNPC()
-local minDistance = math.huge
-local npcFound = nil
-for _, npc in pairs(enemiesFolder:GetChildren()) do
-if npc:IsA("Model") and npc:FindFirstChild("HumanoidRootPart") then
-local dist = getDistanceToNPC(npc)
-if dist < minDistance then
-minDistance = dist
-npcFound = npc
-end
-end
-end
-return npcFound
+	combatLog:GetPropertyChangedSignal("Visible"):Connect(function()
+		if not combatLog.Visible then
+			local lowPopServer = getLowestPopulationServer()
+			if lowPopServer then
+				TeleportService:TeleportToPlaceInstance(game.PlaceId, lowPopServer, LocalPlayer)
+			else
+				warn("ไม่พบเซิร์ฟเวอร์ที่คนน้อย")
+			end
+		end
+	end)
 end
 
-while _G.autoAttack do
-local closestNPC = findClosestNPC()
-if closestNPC then
-local npcName = closestNPC.Name
-local args = {
-[1] = {
-[1] = {
-["PetPos"] = {
-[npcName] = closestNPC.HumanoidRootPart.Position
-},
-["Event"] = "PunchAttack",
-["Enemy"] = npcName
-},
-[2] = "\004"
-}
-}
-game:GetService("ReplicatedStorage").BridgeNet2.dataRemoteEvent:FireServer(unpack(args))
-end
-task.wait(0)
-end
-
-end
-
-tab.newToggle("โจมตีศัตรูอัตโนมัติ", "เปิด/ปิด โหมดโจมตีอัตโนมัติแบบใหม่", false, function(state)
-_G.autoAttack = state
-if state then
-spawn(createAutoAttack)
-end
-end)
-
--- ////////////////////// เพิ่ม Auto Attack V2 //////////////////////
-local autoAttackConnection = nil
-local lastAttackTime = 0
-local attackCooldown = 2 -- หน่วงเวลาโจมตีเพื่อไม่ให้ spam
-
-local function createAutoAttackV2()
-local player = game.Players.LocalPlayer
-local playerChar = player.Character or player.CharacterAdded:Wait()
-local root = playerChar:WaitForChild("HumanoidRootPart")
-
-local enemiesFolder = workspace.__Main.__Enemies.Client
-local remote = game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent")
-local RunService = game:GetService("RunService")
-
-local lastEnemy = nil
-
-local function getDistance(cf1, cf2)
-return (cf1.Position - cf2.Position).Magnitude
-end
-
-local function getHealth(model)
-local text = model:FindFirstChild("HealthBar")
-and model.HealthBar:FindFirstChild("Main")
-and model.HealthBar.Main:FindFirstChild("Bar")
-and model.HealthBar.Main.Bar:FindFirstChild("Amount")
-and model.HealthBar.Main.Bar.Amount:IsA("TextLabel")
-and model.HealthBar.Main.Bar.Amount.Text
-return text and tonumber(text:match("(%d+)"))
-end
-
-local function findClosestEnemy()
-local closestEnemy, closestDistance = nil, math.huge
-for _, enemy in ipairs(enemiesFolder:GetChildren()) do
-if enemy:IsA("Model") and enemy:FindFirstChild("HumanoidRootPart") then
-local distance = getDistance(root.CFrame, enemy.HumanoidRootPart.CFrame)
-local health = getHealth(enemy)
-if health and health > 0 and distance < closestDistance then
-closestDistance = distance
-closestEnemy = enemy
-end
-end
-end
-return closestEnemy
-end
-
-autoAttackConnection = RunService.Heartbeat:Connect(function()
-if not _G.autoAttackV2 then return end
-
-local currentTime = tick()    
-local enemy = findClosestEnemy()    
-if enemy then    
-    local health = getHealth(enemy)    
-    if enemy ~= lastEnemy or (currentTime - lastAttackTime >= attackCooldown) then    
-        lastEnemy = enemy    
-        lastAttackTime = currentTime    
-
-        if health and health > 0 then    
-            local args = {    
-                [1] = {    
-                    [1] = {    
-                        ["PetPos"] = {},    
-                        ["AttackType"] = "All",    
-                        ["Event"] = "Attack",    
-                        ["Enemy"] = enemy.Name    
-                    },    
-                    [2] = "\006"    
-                }    
-            }    
-            remote:FireServer(unpack(args))    
-        end    
-    end    
-end    
-
--- รีเซ็ตถ้าศัตรูตายหรือหาย    
-if lastEnemy and (not lastEnemy.Parent or getHealth(lastEnemy) == nil or getHealth(lastEnemy) <= 0) then    
-    lastEnemy = nil    
-end
-
-end)
-
-end
-
-tab.newToggle("ให้เงาไปโจมตีศัตรูอัตโนมัติ", "เปิด/ปิด โหมดโจมตีอัตโนมัติแบบใหม่", false, function(state)
-_G.autoAttackV2 = state
-if state then
-if not autoAttackConnection then
-createAutoAttackV2()
-end
-else
-if autoAttackConnection then
-autoAttackConnection:Disconnect()
-autoAttackConnection = nil
-end
-end
-end)
--- ////////////////////// ฟังก์ชั่นการเก็บ NPC //////////////////////
-local tab2 = DrRayLibrary.newTab("เก็บnpc", "เลือกเพื่อให้มันเก็บNPC")
-
-local function findNearestEnemy()
-local nearestEnemy = nil
-local shortestDistance = math.huge
-
-for _, enemy in pairs(workspace.__Main.__Enemies.Client:GetChildren()) do
-if enemy:IsA("Model") and enemy:FindFirstChild("HumanoidRootPart") then
-local distance = (enemy.HumanoidRootPart.Position - player.Character.HumanoidRootPart.Position).Magnitude
-if distance < shortestDistance then
-shortestDistance = distance
-nearestEnemy = enemy
-end
-end
-end
-
-return nearestEnemy
-
-end
-
-local function loopCaptureEnemy()
-while _G.autoCaptureNPC do
-local nearestEnemy = findNearestEnemy()
-if nearestEnemy then
-local args = {
-[1] = {
-[1] = {
-["Event"] = "EnemyCapture",
-["Enemy"] = nearestEnemy.Name
-},
-[2] = "\004"
-}
-}
-game:GetService("ReplicatedStorage").BridgeNet2.dataRemoteEvent:FireServer(unpack(args))
-end
-task.wait(0)
-end
-end
-
-local function loopDestroyEnemy()
-while _G.autoDestroyNPC do
-local nearestEnemy = findNearestEnemy()
-if nearestEnemy then
-local args = {
-[1] = {
-[1] = {
-["Event"] = "EnemyDestroy",
-["Enemy"] = nearestEnemy.Name
-},
-[2] = "\004"
-}
-}
-game:GetService("ReplicatedStorage").BridgeNet2.dataRemoteEvent:FireServer(unpack(args))
-end
-task.wait(0)
-end
-end
-
-tab2.newToggle("เปิด/ปิด เก็บ NPC", "เปิดเพื่อเริ่มเก็บ NPC อัตโนมัติ", false, function(state)
-_G.autoCaptureNPC = state
-if state then
-spawn(loopCaptureEnemy)
-end
-end)
-
-tab2.newToggle("เปิด/ปิด เก็บแบบเพชร", "เปิดเพื่อเริ่มทำลาย NPC อัตโนมัติ", false, function(state)
-_G.autoDestroyNPC = state
-if state then
-spawn(loopDestroyEnemy)
-end
-end)
-local tab3 = DrRayLibrary.newTab("วาป", "ImageIdHere")
-tab3.newButton("Leveling City", "กดเพื่อวาปไปยัง Leveling City", function()
-    local args = {
-        {
-            {
-                Event = "ChangeSpawn",
-                Spawn = "SoloWorld"
-            },
-            "\011"
-        }
-    }
-    game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
-end)
-tab3.newButton("Grass Village", "กดเพื่อวาปไปยัง Grass Village", function()
-    local args = {
-	{
-		{
-			Event = "ChangeSpawn",
-			Spawn = "NarutoWorld"
-		},
-		"\011"
-	}
-}
-game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
-end)
-tab3.newButton("Brum lsland", "กดเพื่อวาปไปยัง Brum lsland", function()
-    local args = {
-	{
-		{
-			Event = "ChangeSpawn",
-			Spawn = "OPWorld"
-		},
-		"\011"
-	}
-}
-game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
-end)
-tab3.newButton("Faceheal Town", "กดเพื่อวาปไปยัง Faceheal Town", function()
-    local args = {
-	{
-		{
-			Event = "ChangeSpawn",
-			Spawn = "BleachWorld"
-		},
-		"\011"
-	}
-}
-game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
-end)
-tab3.newButton("Lucky Kingdom", "กดเพื่อวาปไปยัง Lucky Kingdom", function()
-    local args = {
-	{
-		{
-			Event = "ChangeSpawn",
-			Spawn = "BCWorld"
-		},
-		"\011"
-	}
-}
-game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
-end)
-tab3.newButton("Nipon City", "กดเพื่อวาปไปยัง Nipon City", function()
-    local args = {
-	{
-		{
-			Event = "ChangeSpawn",
-			Spawn = "ChainsawWorld"
-		},
-		"\011"
-	}
-}
-game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
-end)
-tab3.newButton("Mori Town", "กดเพื่อวาปไปยัง Mori Town", function()
-    local args = {
-	{
-		{
-			Event = "ChangeSpawn",
-			Spawn = "JojoWorld"
-		},
-		"\011"
-	}
-}
-game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
-end)
-tab3.newButton("Dragon City", "กดเพื่อวาปไปยัง Dragon City", function()
-    local args = {
-	{
-		{
-			Event = "ChangeSpawn",
-			Spawn = "DBWorld"
-		},
-		"\011"
-	}
-}
-game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
-end)
-tab3.newButton("XZ City", "กดเพื่อวาปไปยัง XZ City", function()
-    local args = {
-	{
-		{
-			Event = "ChangeSpawn",
-			Spawn = "OPMWorld"
-		},
-		"\011"
-	}
-}
-game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
-end)
-tab3.newButton("Kindama City", "กดเพื่อวาปไปยัง Kindama City", function()
-    local args = {
-	{
-		{
-			Event = "ChangeSpawn",
-			Spawn = "DanWorld"
-		},
-		"\011"
-	}
-}
-game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
-end)
+checkAndRejoin()
